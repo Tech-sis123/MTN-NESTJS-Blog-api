@@ -21,6 +21,7 @@ export class PostCreateDto {
   @Trim()
   @IsString({ message: 'content must be text' })
   @IsNotEmpty({ message: 'content is required' })
+  @MaxLength(10000, { message: 'content must be at most 10000 characters' })
   content: string;
 
   @Trim()
@@ -33,9 +34,15 @@ export class PostCreateDto {
   @IsBoolean({ message: 'published must be true or false' })
   published?: boolean;
 
+  @Trim()
   @IsOptional()
   @IsArray({ message: 'tags must be an array' })
   @ArrayMaxSize(5, { message: 'a post can have at most 5 tags' })
   @IsString({ each: true, message: 'every tag must be text' })
+  @IsNotEmpty({ each: true, message: 'tags must not be empty' })
+  @MaxLength(30, {
+    each: true,
+    message: 'each tag must be at most 30 characters',
+  })
   tags?: string[];
 }

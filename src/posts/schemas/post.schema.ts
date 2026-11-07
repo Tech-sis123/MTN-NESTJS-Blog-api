@@ -12,7 +12,7 @@ export class Post {
   @Prop({ required: true, trim: true, maxlength: 200 })
   title: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, maxlength: 10000 })
   content: string;
 
   @Prop({ required: true })
