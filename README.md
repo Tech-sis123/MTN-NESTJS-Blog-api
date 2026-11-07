@@ -1,114 +1,119 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Blog API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A REST API for blog posts and their comments, built with [NestJS](https://nestjs.com), TypeScript and MongoDB (Mongoose).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+- Create, read, update and delete posts; add, list, edit and delete comments on a post
+- Request validation with `class-validator` (bad input gets a `400` with a clear message)
+- Filter posts by `published` and paginate the list
+- Interactive API docs (Swagger UI) at `/docs`
+- Unit tests plus an end-to-end test that runs on an in-memory MongoDB
 
-## Description
+## Setup
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+**Requirements:** Node.js 22 or newer, and a MongoDB server running locally (or a connection string to a hosted one, e.g. MongoDB Atlas).
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env     # on Windows PowerShell: Copy-Item .env.example .env
+npm run start:dev
 ```
 
-## Compile and run the project
+Edit `.env` if your MongoDB is not at the default address:
+
+| Variable      | Default                                | Meaning                  |
+| ------------- | -------------------------------------- | ------------------------ |
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017/blog-api`   | MongoDB connection string |
+| `PORT`        | `3000`                                 | Port the API listens on  |
+
+The API is then at `http://localhost:3000` and the Swagger UI at `http://localhost:3000/docs`.
+
+## Endpoints
+
+| Method | Path                         | Description                                    | Success |
+| ------ | ---------------------------- | ---------------------------------------------- | ------- |
+| POST   | `/posts`                     | Create a post                                  | 201     |
+| GET    | `/posts`                     | List posts (newest first, paginated, filterable) | 200   |
+| GET    | `/posts/:id`                 | Get one post                                   | 200     |
+| PATCH  | `/posts/:id`                 | Update some fields of a post                   | 200     |
+| DELETE | `/posts/:id`                 | Delete a post and all its comments             | 204     |
+| POST   | `/posts/:postId/comments`    | Add a comment to a post                        | 201     |
+| GET    | `/posts/:postId/comments`    | List a post's comments (oldest first)          | 200     |
+| PATCH  | `/posts/:postId/comments/:id`| Update a comment                               | 200     |
+| DELETE | `/posts/:postId/comments/:id`| Delete a comment                               | 204     |
+
+Errors: `400` for invalid input or a malformed id, `404` when the post or comment does not exist.
+
+**Post fields:** `title` (required, max 200 chars), `content` (required, max 10 000), `author` (required), `published` (boolean, default `false`), `tags` (up to 5 non-empty strings, each max 30 chars).
+**Comment fields:** `author` (required), `content` (required, max 1 000).
+
+**`GET /posts` query parameters:**
+
+| Parameter   | Default | Meaning                                                  |
+| ----------- | ------- | -------------------------------------------------------- |
+| `published` | (none)  | `true` or `false` to filter; leave out to include drafts |
+| `page`      | `1`     | Page number, starting at 1                               |
+| `limit`     | `10`    | Posts per page, 1 to 100                                 |
+
+## Examples
+
+Create a post:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+curl -X POST http://localhost:3000/posts \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Hello NestJS","content":"My first post","author":"Ada","published":true,"tags":["nestjs"]}'
 ```
 
-## Run tests
+```json
+{
+  "_id": "6650f1c2a1b2c3d4e5f60718",
+  "title": "Hello NestJS",
+  "content": "My first post",
+  "author": "Ada",
+  "published": true,
+  "tags": ["nestjs"],
+  "createdAt": "2026-11-07T15:00:00.000Z",
+  "updatedAt": "2026-11-07T15:00:00.000Z"
+}
+```
+
+Comment on it, using the post's `_id`:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+curl -X POST http://localhost:3000/posts/6650f1c2a1b2c3d4e5f60718/comments \
+  -H "Content-Type: application/json" \
+  -d '{"author":"Bob","content":"Nice post!"}'
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+List the first page of published posts:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+curl "http://localhost:3000/posts?published=true&page=1&limit=10"
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+```json
+{ "data": [ { "_id": "...", "title": "Hello NestJS" } ], "total": 1, "page": 1, "limit": 10 }
+```
 
-## Observability
+## Scripts
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+| Command             | What it does                                             |
+| ------------------- | -------------------------------------------------------- |
+| `npm run start:dev` | Start with auto-reload                                   |
+| `npm run build`     | Compile to `dist/`                                       |
+| `npm run start:prod`| Run the compiled app                                     |
+| `npm test`          | Unit tests                                               |
+| `npm run test:e2e`  | End-to-end test (downloads a MongoDB binary on first run, then needs no running database) |
+| `npm run lint`      | Lint with oxlint                                         |
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+## Project layout
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```
+src/
+  main.ts          starts the server, sets up Swagger
+  app.setup.ts     validation settings shared by the server and the tests
+  app.module.ts    root module: config + database connection
+  posts/           controller, service, schema and DTOs for posts
+  comments/        same, for comments (stored in their own collection)
+test/              end-to-end test
+```
