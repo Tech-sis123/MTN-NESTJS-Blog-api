@@ -8,12 +8,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ParseObjectIdPipe } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
 import { PostsService } from './posts.service.js';
 import { PostCreateDto } from './dto/post-create.dto.js';
 import { PostUpdateDto } from './dto/post-update.dto.js';
+import { PostQueryDto } from './dto/post-query.dto.js';
 
 // The controller's only job is HTTP: read the URL, params and body, call the service,
 // and return the result (Nest turns it into JSON). All routes here start with /posts.
@@ -29,8 +31,8 @@ export class PostsController {
   }
 
   @Get()
-  findAll() {
-    return this.postsService.findAll();
+  findAll(@Query() query: PostQueryDto) {
+    return this.postsService.findAll(query);
   }
 
   // ParseObjectIdPipe checks the id looks like a MongoDB ObjectId (24 hex characters)

@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PostCreateDto } from './dto/post-create.dto.js';
 import { PostUpdateDto } from './dto/post-update.dto.js';
+import { PostQueryDto } from './dto/post-query.dto.js';
 import { Post, PostDocument } from './schemas/post.schema.js';
 import { Comment } from '../comments/schemas/comment.schema.js';
 
@@ -22,9 +23,19 @@ export class PostsService {
     return this.postModel.create(postCreateDto);
   }
 
-  // Newest first.
-  findAll(): Promise<PostDocument[]> {
-    return this.postModel.find().sort({ createdAt: -1 }).exec();
+  // Newest first, one page at a time. Without `published` in the query, drafts are included.
+  async findAll({ published, page, limit }: PostQueryDto) {
+    const filter = published === undefined ? {} : { published };
+    const [data, total] = await Promise.all([
+      this.postModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec(),
+      this.postModel.countDocuments(filter).exec(),
+    ]);
+    return { data, total, page, limit };
   }
 
   async findOne(id: Types.ObjectId): Promise<PostDocument> {

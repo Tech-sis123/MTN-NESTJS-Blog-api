@@ -13,6 +13,8 @@ const result = (value: unknown) => ({ exec: vi.fn().mockResolvedValue(value) });
 describe('PostsService', () => {
   let service: PostsService;
   const postModel = {
+    find: vi.fn(),
+    countDocuments: vi.fn(),
     findById: vi.fn(),
     findByIdAndDelete: vi.fn(),
   };
@@ -29,6 +31,46 @@ describe('PostsService', () => {
     }).compile();
 
     service = module.get<PostsService>(PostsService);
+  });
+
+  describe('findAll', () => {
+    // find() returns a chain: sort -> skip -> limit -> exec.
+    const chain = (posts: unknown[]) => {
+      const query = {
+        sort: vi.fn().mockReturnThis(),
+        skip: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        exec: vi.fn().mockResolvedValue(posts),
+      };
+      postModel.find.mockReturnValue(query);
+      return query;
+    };
+
+    it('filters by published and returns the page with the total', async () => {
+      const query = chain([{ title: 'A' }]);
+      postModel.countDocuments.mockReturnValue(result(25));
+      const page = await service.findAll({
+        published: true,
+        page: 1,
+        limit: 10,
+      });
+      expect(postModel.find).toHaveBeenCalledWith({ published: true });
+      expect(query.limit).toHaveBeenCalledWith(10);
+      expect(page).toEqual({
+        data: [{ title: 'A' }],
+        total: 25,
+        page: 1,
+        limit: 10,
+      });
+    });
+
+    it('skips the earlier pages and has no filter by default', async () => {
+      const query = chain([]);
+      postModel.countDocuments.mockReturnValue(result(0));
+      await service.findAll({ page: 3, limit: 5 });
+      expect(postModel.find).toHaveBeenCalledWith({});
+      expect(query.skip).toHaveBeenCalledWith(10);
+    });
   });
 
   it('returns a post that exists', async () => {
